@@ -1,0 +1,119 @@
+---
+title: "Assignment 6 - Reliability"
+subtitle1: Manual spot checks included to ensure correct data processing
+subtitle2: The final reliability output is at the bottom
+author: "Stefan Maciolek"
+date: "11/1/2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#importing item data
+library(foreign)
+itemdata <- read.spss("D:\\515\\Week 9 10-28\\ItemDataHW.sav", to.data.frame = TRUE)
+```
+
+```{r}
+#importing key
+key <- read.table("D:\\515\\Week 9 10-28\\key.txt", header = TRUE)
+```
+
+```{r}
+#converting key to numeric
+for(i in 1:29){
+  if (key$Key[i] == "A") {key$newKey[i] = 1}
+  else if (key$Key[i] == "B") {key$newKey[i] = 2}
+  else if (key$Key[i] == "C") {key$newKey[i] = 3}
+  else if (key$Key[i] == "D") {key$newKey[i] = 4}
+}
+#manual check, remove if no longer necessary
+print("Spot check that the numbers in newKey correspond to the correct answers in Key")
+print(key[1:5,2:3])
+```
+
+```{r}
+#creating right/wrong matrix
+correct <- rep(0,90*29)
+dim(correct) <- c(90,29)
+correct <- as.data.frame(correct)
+for (j in 1:90) {
+  for (i in 1:29){
+    if (is.na(itemdata[j,i]) == TRUE) {itemdata[j,i]=0} #any omits are wrong
+    if (key$newKey[i] == itemdata[j,i]) {correct[j,i]=1}  #checking item responses against key
+  }
+}
+#manual check, remove if no longer necessary
+print("spot check that the each entry in correct = 1 if the itemdata entry matches the key, and 0 otherwise")
+print(key[1:2,3])
+print(itemdata[1:5,1:2])
+print(correct[1:5,1:2])
+```
+
+```{r}
+#computing scores for each examinee
+score <- rep(0,90)
+for (i in 1:90){
+score[i] = sum(correct[i,1:29])
+}
+print("spot check that the scores seem reasonable and range from 0 to 29")
+print(score[1:10])
+#computing the means and sds for each item
+mean <- rep(0,29)
+sd <- rep(0,29)
+var <- rep(0,29)
+for (i in 1:29){
+  mean[i] <- mean(correct[1:90,i])
+  sd[i] <- sd(correct[1:90,i])
+}
+var <- sd^2
+meanscore <- mean(score)
+sdscore <- sd(score)
+print(paste("The mean of the scores is: ",round(meanscore,4)))
+print(paste("The standard deviation of the scores is ",round(sdscore,4)))
+print("The means and standard deviations of the items were also calculated but are not displayed")
+print("spot check that the item means and sds all seem reasonable and range from 0 to 1")
+print(round(mean[1:5],4))
+print(round(sd[1:5],4))
+hist(score, main = "Histogram of scores")
+```
+
+```{r}
+#computing reliability with Cronbach's Alpha
+alpha <- (29/(29-1)) * (1-(sum(var[1:29])/(sdscore^2)))
+print(paste("The reliability, calculated via Cronbach's alpha is: ",round(alpha,4)))
+
+```
+```{r}
+#item deletion reliabilities:
+delete <- function(i){
+  sdscoredelete <- sd(score[-i])
+  deletedalpha <- (28/(28-1)) * (1-(sum(var[-i])/(sdscoredelete^2)))
+  return(round(deletedalpha,4))
+}
+delete(1)
+missingalpha <- rep(0,29)
+for (i in 1:29){
+  missingalpha[i] <- delete(i)
+}
+itemnumber <- c(1:29)
+partialalphas <- cbind.data.frame(itemnumber,missingalpha)
+print("The reliability of the test if each item was eliminated is: ")
+print(partialalphas)
+```
+
+
+
+```{r}
+#time stamp
+print(Sys.time())
+```
+
+
+
